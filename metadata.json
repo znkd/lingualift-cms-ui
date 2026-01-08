@@ -1,0 +1,5 @@
+{
+  "name": "LinguaLift CMS",
+  "description": "The core operational mid-platform for LinguaLift, strictly focused on Placement Test asset management, structured question entry, and administrative security access.",
+  "requestFramePermissions": []
+}
