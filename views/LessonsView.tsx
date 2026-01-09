@@ -2,6 +2,40 @@ import React, { useState, useRef } from 'react';
 import { ICONS } from '../constants';
 import { Lesson } from '../types';
 
+// Structured specification data mirroring the server response for ZIP imports
+const LESSON_ZIP_SPEC = {
+  "file_format": {
+    "extension": ".zip",
+    "max_size": "100MB",
+    "encoding": "UTF-8"
+  },
+  "structure": {
+    "description": "The ZIP package should contain independent directories for each lesson.",
+    "hierarchy": [
+      "course.zip",
+      "├── lesson_alpha/",
+      "│   ├── metadata.json (Required)",
+      "│   ├── video.mp4 (Optional)",
+      "│   └── thumbnail.jpg (Optional)",
+      "└── lesson_beta/",
+      "    └── ..."
+    ]
+  },
+  "metadata_fields": {
+    "title": { "type": "string", "required": true, "desc": "Lesson Title (max 255)" },
+    "topic": { "type": "string", "required": false, "desc": "Subject matter (max 255)" },
+    // Added 'desc' property to fix type error on line 265
+    "cefr_level": { "type": "enum", "required": true, "desc": "Language proficiency level", "values": ["A1", "A2", "B1", "B2", "C1", "C2"] }
+  },
+  "validation_rules": [
+    "Independent directory per lesson",
+    "metadata.json is mandatory in each folder",
+    "Lesson titles must be unique within the ZIP",
+    "CEFR level must be standard A1-C2",
+    "JSON files must use UTF-8 encoding"
+  ]
+};
+
 const LessonsView: React.FC = () => {
   // Mock initial database state mirroring the SQLAlchemy Lesson model
   const [lessons, setLessons] = useState<Lesson[]>([
@@ -47,6 +81,7 @@ const LessonsView: React.FC = () => {
 
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [showSpec, setShowSpec] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const formatDuration = (seconds: number) => {
@@ -61,6 +96,43 @@ const LessonsView: React.FC = () => {
     if (l.startsWith('B')) return 'bg-blue-100 text-blue-700 border-blue-200';
     if (l.startsWith('C')) return 'bg-rose-100 text-rose-700 border-rose-200';
     return 'bg-slate-100 text-slate-700 border-slate-200';
+  };
+
+  const handleDownloadTemplate = () => {
+    const template = {
+      "title": "Daily Conversation",
+      "topic": "Introduction to common greetings",
+      "cefr_level": "A1",
+      "target_words": ["apple", "banana", "orange"],
+      "script": {
+        "dialogues": [
+          {"role": "A", "text": "Hello!", "timestamp": 0},
+          {"role": "B", "text": "Hi there!", "timestamp": 2}
+        ]
+      },
+      "word_analysis": {
+        "key_words": ["hello", "hi"],
+        "grammar_points": ["greetings"]
+      },
+      "quiz": {
+        "questions": [
+          {
+            "id": 1,
+            "question": "How to greet someone?",
+            "options": ["Hello", "Goodbye", "Thanks"],
+            "correct_answer": 0
+          }
+        ]
+      }
+    };
+    const blob = new Blob([JSON.stringify(template, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'metadata.json';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -114,10 +186,113 @@ const LessonsView: React.FC = () => {
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       {/* Header Section */}
-      <div>
-        <h2 className="text-4xl font-black text-slate-900 tracking-tight">Content Repository</h2>
-        <p className="text-slate-500 font-bold uppercase text-xs tracking-[0.2em] mt-1">Section 3.0: Core Lesson Data & Asset Management</p>
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div>
+          <h2 className="text-4xl font-black text-slate-900 tracking-tight">Content Repository</h2>
+          <p className="text-slate-500 font-bold uppercase text-xs tracking-[0.2em] mt-1">Section 3.0: Core Lesson Data & Asset Management</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={() => setShowSpec(!showSpec)}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl transition-all font-black text-xs uppercase tracking-widest border shadow-sm ${showSpec ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'}`}
+          >
+            {ICONS.Dashboard}
+            ZIP Specification
+          </button>
+          <button 
+            onClick={handleDownloadTemplate}
+            className="flex items-center gap-2 px-5 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 transition-all font-black text-xs uppercase tracking-widest shadow-sm"
+          >
+            {ICONS.Add}
+            JSON Template
+          </button>
+        </div>
       </div>
+
+      {/* Requirement: ZIP Import Specification UI Block */}
+      {showSpec && (
+        <div className="bg-slate-900 rounded-[2.5rem] p-10 text-white shadow-2xl animate-in slide-in-from-top-4 duration-300">
+          <div className="flex items-center justify-between mb-8">
+            <h3 className="text-xl font-black flex items-center gap-3">
+              <div className="w-1.5 h-6 bg-indigo-500 rounded-full"></div>
+              ZIP Ingestion Protocol (v1.1)
+            </h3>
+            <button onClick={() => setShowSpec(false)} className="text-slate-400 hover:text-white font-black text-xs uppercase tracking-widest transition-colors">Close Guide ×</button>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+            {/* Structure and Format */}
+            <div className="space-y-8">
+              <div>
+                <h4 className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em] mb-4">Package Structure</h4>
+                <div className="bg-black/40 p-6 rounded-3xl font-mono text-[11px] text-indigo-300/80 border border-white/5 whitespace-pre">
+                  {LESSON_ZIP_SPEC.structure.hierarchy.join('\n')}
+                </div>
+                <p className="text-xs text-slate-500 mt-3 italic">{LESSON_ZIP_SPEC.structure.description}</p>
+              </div>
+
+              <div>
+                <h4 className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em] mb-4">File Constraints</h4>
+                <div className="grid grid-cols-3 gap-3">
+                  {Object.entries(LESSON_ZIP_SPEC.file_format).map(([key, val]) => (
+                    <div key={key} className="bg-white/5 p-4 rounded-2xl border border-white/10">
+                      <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">{key.replace('_', ' ')}</p>
+                      <p className="text-xs font-bold text-slate-200 mt-1">{String(val)}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Validation and Metadata */}
+            <div className="space-y-8">
+              <div>
+                <h4 className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em] mb-4">Mandatory Metadata Fields</h4>
+                <div className="space-y-2">
+                  {/* Fixed TypeScript errors by using explicit [string, any] typing for Object.entries map */}
+                  {Object.entries(LESSON_ZIP_SPEC.metadata_fields).map(([key, val]: [string, any]) => (
+                    <div key={key} className="flex items-start gap-3 p-4 bg-white/5 rounded-2xl border border-white/5 group hover:border-indigo-500/30 transition-all">
+                      <div className="shrink-0 mt-1">
+                        {val.required ? (
+                          <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]"></div>
+                        ) : (
+                          <div className="w-2 h-2 rounded-full bg-slate-600"></div>
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-black text-white tracking-wide">{key}</span>
+                          <span className="text-[9px] font-black text-slate-500 uppercase tracking-tighter">{val.type}</span>
+                        </div>
+                        <p className="text-[10px] text-slate-400 mt-1">{val.desc}</p>
+                        {val.values && (
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            {val.values.map((v: string) => (
+                              <span key={v} className="px-1.5 py-0.5 bg-indigo-500/20 text-indigo-400 text-[8px] font-black rounded uppercase">{v}</span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <h4 className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em] mb-4">Ingestion Rules</h4>
+                <ul className="space-y-2">
+                  {LESSON_ZIP_SPEC.validation_rules.map((rule, idx) => (
+                    <li key={idx} className="flex items-center gap-3 text-xs text-slate-300">
+                      <div className="w-1 h-1 bg-indigo-500 rounded-full"></div>
+                      {rule}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Upload Section - Restored Drag & Select Style */}
       {!isUploading ? (
