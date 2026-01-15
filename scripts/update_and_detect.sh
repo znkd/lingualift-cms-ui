@@ -1,15 +1,54 @@
 #!/bin/zsh
 
-echo "--- [1/2] 正在拉取 Project A 最新代码 ---"
-CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
+# 设置脚本遇到错误时退出
+set -e
+
+# 获取脚本所在目录，并切换到项目根目录
+SCRIPT_DIR="$(cd "$(dirname "${0}")" && pwd)"
+PROJECT_ROOT="$SCRIPT_DIR/.."
+PROJECT_ROOT="$(cd "$PROJECT_ROOT" && pwd)"
+
+echo "项目根目录: $PROJECT_ROOT"
+cd "$PROJECT_ROOT"
+
+# 检查当前目录是否是git仓库
+if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    echo "ERROR: 当前目录不是一个git仓库"
+    exit 1
+fi
+
+# 显示当前git状态
+echo "当前分支: $(git branch --show-current)"
+echo "远程仓库:"
+git remote -v
+
+echo "\n--- [1/2] 正在拉取 lingualift-cms-ui 最新代码 ---"
 
 # 记录拉取前的当前版本（HEAD）
-OLD_REV=$(git rev-parse HEAD)
+if ! OLD_REV=$(git rev-parse HEAD 2>/dev/null); then
+    echo "警告: 无法获取当前提交ID，可能是新仓库"
+    OLD_REV=""
+fi
 
-if git pull origin "$CURRENT_BRANCH" --rebase; then
-    echo "SUCCESS: Project A 已更新。"
+# 获取当前分支
+CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
+if [ -z "$CURRENT_BRANCH" ]; then
+    echo "ERROR: 无法获取当前分支"
+    exit 1
+fi
+
+# 拉取最新代码
+echo "正在从 origin/$CURRENT_BRANCH 拉取更新..."
+if git fetch origin "$CURRENT_BRANCH"; then
+    echo "拉取成功，正在合并更改..."
+    if git rebase "origin/$CURRENT_BRANCH"; then
+        echo "SUCCESS: lingualift-cms-ui 已更新。"
+    else
+        echo "ERROR: 合并更改时出错"
+        exit 1
+    fi
 else
-    echo "ERROR: 拉取失败。"
+    echo "ERROR: 拉取失败"
     exit 1
 fi
 
