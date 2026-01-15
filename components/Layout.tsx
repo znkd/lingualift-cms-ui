@@ -51,7 +51,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, onLo
             className="w-full flex items-center gap-4 px-4 py-3 text-slate-400 hover:text-red-400 hover:bg-red-400/10 rounded-xl transition-all"
           >
             {ICONS.Logout}
-            {sidebarOpen && <span className="font-bold text-sm">Sign Out</span>}
+            {sidebarOpen && <span className="font-bold text-sm">Sign Out / Logout</span>}
           </button>
         </div>
       </aside>
