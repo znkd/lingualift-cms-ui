@@ -188,7 +188,7 @@ const LessonsView: React.FC = () => {
       {/* Header Section */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
-          <h2 className="text-4xl font-black text-slate-900 tracking-tight">Content Repository</h2>
+          <h2 className="text-4xl font-black text-slate-900 tracking-tight">Lessons Repository</h2>
           <p className="text-slate-500 font-bold uppercase text-xs tracking-[0.2em] mt-1">Section 3.0: Core Lesson Data & Asset Management</p>
         </div>
         <div className="flex items-center gap-3">
